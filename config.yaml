@@ -1,0 +1,26 @@
+application:
+  agreements: napcat
+  bot: zhenxun
+  description: A simple and cute QQ bot deployment script
+  name: firefly
+  version: 1.0.0
+project:
+  agreement: napcat
+  bot: zhenxun
+server:
+  host: 0.0.0.0
+  is_new: false
+  password: ilovefirefly
+  port: 8000
+  username: ilovefirefly
+ui:
+  background:
+    options:
+      gyroControls: false
+      minHeight: 200.0
+      minWidth: 200.0
+      mouseControls: true
+      scale: 1.0
+      scaleMobile: 1.0
+      touchControls: true
+    type: rings
