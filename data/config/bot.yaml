@@ -1,0 +1,7 @@
+bot:
+  - zhenxun
+  - yunzai
+zhenxun:
+  name: zhenxun
+  version: 1.0.0
+  description: A QQ bot project by zhenxun

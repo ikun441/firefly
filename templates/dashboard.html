@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>firefly-控制面板</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<style>
+  @font-face {
+    font-family: 'cute-font';
+    src: url("/static/src/cute.ttf");
+  }
+  html, body {
+    font-family: 'cute-font', sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    color: #fff;
+    background-color: #6ee2f5; /* 添加背景色，与vanta.js背景颜色匹配 */
+  }
+  .custom-text {
+    font-family: 'cute-font', sans-serif;
+  }
+</style>
+<body>
+  <div id="background-container" style="width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 0;"></div>
+  
+  <div class="navbar">
+    <div class="navbar-brand">
+      <img src="/static/src/firefly.png" alt="Logo" class="navbar-logo">
+      <span class="custom-text">Firefly</span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/dashboard" class="navbar-item active"><i class="fas fa-home"></i> 首页</a>
+      <a href="/run" class="navbar-item"><i class="fas fa-play"></i> 启动</a>
+      <a href="/logs" class="navbar-item"><i class="fas fa-list"></i> 日志</a>
+      <a href="/processes" class="navbar-item"><i class="fas fa-tasks"></i> 进程</a>
+      <a href="/settings" class="navbar-item"><i class="fas fa-cog"></i> 设置</a>
+    </div>
+    <div class="navbar-end">
+      <button id="logout-btn" class="navbar-item"><i class="fas fa-sign-out-alt"></i><a href="/login">退出</a></button>
+    </div>
+  </div>
+
+  <div class="dashboard-container">
+    
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <div class="top-bar">
+        <div class="page-title">
+          <h1 class="custom-text">控制面板</h1>
+        </div>
+        <div class="user-info">
+          <span id="current-user">管理员</span>
+          <div class="user-avatar">
+            <i class="fas fa-user"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="dashboard-content">
+        <!-- 状态卡片 -->
+        <div class="status-cards">
+          <div class="status-card">
+            <div class="card-icon running">
+              <i class="fas fa-robot"></i>
+            </div>
+            <div class="card-info">
+              <h3>机器人状态</h3>
+              <p id="bot-status" style="color: #ffffff;">zhenxun_bot:运行中</p>
+            </div>
+            <button class="card-action" id="toggle-bot">
+              <i class="fas fa-power-off"></i>
+            </button>
+          </div>
+          
+          <div class="status-card">
+            <div class="card-icon">
+              <i class="fas fa-network-wired"></i>
+            </div>
+            <div class="card-info">
+              <h3>协议状态</h3>
+              <p id="protocol-status" style="color: #ffffff;">napcat:已连接</p>
+            </div>
+            <button class="card-action" id="reconnect-protocol">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+          
+          <div class="status-card">
+            <div class="card-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="card-info">
+              <h3>系统资源</h3>
+              <p id="system-resources" style="color: #ffffff;">CPU: 10% | 内存: 256MB | 进程: 100 | 磁盘: 10GB</p>
+            </div>
+            <button class="card-action" id="refresh-resources">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- 统计图表 -->
+        <div class="stats-container">
+          <div class="stats-card">
+            <h3 class="custom-text">资源消耗</h3>
+            <div class="chart-container">
+              <canvas id="messages-chart"></canvas>
+            </div>
+          </div>
+          
+          <div class="stats-card">
+            <h3 class="custom-text">进程监控</h3>
+            <div class="process-container">
+              <div class="process-header">
+                <span>PID</span>
+                <span>进程名</span>
+                <span>内存占用</span>
+                <span>CPU占用</span>
+              </div>
+              <div id="process-list" class="process-list">
+                <!-- 进程信息将通过 JavaScript 动态加载 -->
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 最近日志 -->
+        <div class="recent-logs">
+          <div class="section-header">
+            <h3 class="custom-text" style="color: #ffffff;">最近日志</h3>
+            <a href="/logs" class="view-all">查看全部 <i class="fas fa-arrow-right"></i></a>
+          </div>
+          <div class="logs-table-container">
+            <table class="logs-table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>类型</th>
+                  <th>内容</th>
+                </tr>
+              </thead>
+              <tbody id="recent-logs-body" style="color: #ffffff;">
+                <!-- 日志内容将通过 JavaScript 动态加载 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notification" class="notification">
+    <span id="notification-message"></span>
+    <button id="notification-close"><i class="fas fa-times"></i></button>
+  </div>
+
+  <style>
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1.5rem;
+      background: rgba(0,0,0,0.2);
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .navbar-logo {
+      height: 40px;
+      width: auto;
+    }
+    .navbar-menu {
+      display: flex;
+      gap: 1rem;
+    }
+    .navbar-item {
+      color: #b0acac;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+    }
+    .navbar-item:hover, .navbar-item.active {
+      background: #fbfafa33;
+      transform: translateY(-2px);
+    }
+    .navbar-end {
+      margin-left: auto;
+    }
+    #logout-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-family: 'cute-font', sans-serif;
+    }
+    
+    .dashboard-container {
+      height: calc(100vh - 60px);
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* 主内容区样式 */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .page-title h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: #f8f7f7;
+      text-shadow: 0 2px 10px rgba(253, 247, 247, 0.2);
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: #f7f3f3;
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(245, 243, 243, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    
+    /* 状态卡片样式 */
+    .status-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .status-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 8px 32px rgba(251, 251, 253, 0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .status-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 32px rgba(245, 245, 247, 0.2);
+    }
+    .card-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: rgba(247, 244, 244, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: #f8f5f5;
+    }
+    .card-icon.running {
+      background: linear-gradient(135deg, #4f8cff 0%, #6ee2f5 100%);
+    }
+    .card-info {
+      flex: 1;
+    }
+    .card-info h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.1rem;
+      color: #faf5f5;
+    }
+    .card-info p {
+      margin: 0;
+      color: rgba(0, 0, 0, 0.7);
+      font-size: 0.9rem;
+    }
+    .card-action {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(248, 244, 244, 0.1);
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .card-action:hover {
+      background: rgba(14, 14, 14, 0.2);
+      transform: scale(1.1);
+    }
+    
+    /* 统计图表样式 */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .stats-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+    }
+    .stats-card h3 {
+      margin: 0 0 1rem 0;
+      color: #faf5f5;
+      font-size: 1.2rem;
+    }
+    .chart-container {
+      height: 250px;
+      position: relative;
+    }
+    
+    /* 进程监控样式 */
+    .process-container {
+      height: 250px;
+      overflow-y: auto;
+    }
+    .process-header {
+      display: grid;
+      grid-template-columns: 80px 1fr 100px 80px;
+      gap: 1rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      font-weight: bold;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+    .process-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .process-item {
+      display: grid;
+      grid-template-columns: 80px 1fr 100px 80px;
+      gap: 1rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    .process-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .process-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* 最近日志样式 */
+    .recent-logs {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .section-header h3 {
+      margin: 0;
+      color: #000000;
+      font-size: 1.2rem;
+    }
+    .view-all {
+      color: #6ee2f5;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .view-all:hover {
+      color: #4f8cff;
+      transform: translateX(5px);
+    }
+    .logs-table-container {
+      overflow-x: auto;
+    }
+    .logs-table {
+      width: 100%;
+      border-collapse: collapse;
+      color: rgba(4, 3, 3, 0.8);
+    }
+    .logs-table th, .logs-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .logs-table th {
+      color: #fcfcfc;
+      font-weight: 600;
+    }
+    .logs-table tbody tr:hover {
+      background: rgba(244, 236, 236, 0.05);
+    }
+    
+    /* 通知样式 */
+    .notification {
+      position: fixed;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      z-index: 100;
+      transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    .notification.show {
+      bottom: 30px;
+    }
+    #notification-close {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 992px) {
+      .sidebar {
+        width: 80px;
+      }
+      .sidebar-header h2, .menu-item span {
+        display: none;
+      }
+      .sidebar-header {
+        justify-content: center;
+      }
+      .menu-item {
+        justify-content: center;
+        padding: 0.75rem;
+      }
+      .menu-item i {
+        margin: 0;
+      }
+    }
+    @media (max-width: 768px) {
+      .status-cards, .stats-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.rings.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.birds.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.waves.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.dots.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.cells.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.halo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <script>
+    // 获取当前背景设置
+    let currentBackground = null;
+    let backgroundConfig = {
+      type: 'rings',
+      options: {
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x4f8cff,
+        backgroundColor: 0x6ee2f5,
+        speed: 1.00
+      }
+    };
+
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', async function() {
+      // 获取配置
+      try {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        
+        if (data.success && data.config.ui && data.config.ui.background) {
+          backgroundConfig = data.config.ui.background;
+        }
+      } catch (error) {
+        console.error('获取配置失败:', error);
+      }
+
+      // 初始化背景
+      initBackground();
+      
+      // 初始化图表
+      initCharts();
+      
+      // 加载最近日志
+      loadRecentLogs();
+      
+      // 初始化状态卡片交互
+      initStatusCards();
+      
+      // 监听通知关闭按钮
+      document.getElementById('notification-close').addEventListener('click', hideNotification);
+    });
+
+    // 初始化图表
+    function initCharts() {
+      // 消息统计图表
+      const messagesCtx = document.getElementById('messages-chart').getContext('2d');
+      const messagesChart = new Chart(messagesCtx, {
+        type: 'line',
+        data: {
+          labels: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00'],
+          datasets: [{
+            label: 'CPU占用',
+            data: [12, 5, 35, 17, 22, 38, 50],
+            borderColor: '#4f8cff',
+            backgroundColor: 'rgba(79, 140, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+          }, {
+            label: '内存占用',
+            data: [80, 74, 70, 75, 85, 90, 95],
+            borderColor: '#6ee2f5',
+            backgroundColor: 'rgba(110, 226, 245, 0.1)',
+            tension: 0.4,
+            fill: true
+          },{
+            label: '进程数量',
+            data: [19, 12, 15, 17, 18, 21, 25],
+            borderColor: '#ffffff',
+            backgroundColor: 'rgba(19, 22, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: 'rgba(255, 255, 255, 0.7)'
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.7)'
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.7)'
+              }
+            }
+          }
+        }
+      });
+      
+      // 加载进程监控数据
+      loadProcesses();
+    }
+
+    // 初始化背景
+    function initBackground() {
+      if (currentBackground) {
+        currentBackground.destroy();
+      }
+      
+      const type = backgroundConfig.type || 'rings';
+      const options = {
+        ...backgroundConfig.options,
+        el: '#background-container'
+      };
+      
+      switch (type) {
+        case 'rings':
+          currentBackground = VANTA.RINGS(options);
+          break;
+        case 'net':
+          currentBackground = VANTA.NET(options);
+          break;
+        case 'birds':
+          currentBackground = VANTA.BIRDS(options);
+          break;
+        case 'fog':
+          currentBackground = VANTA.FOG(options);
+          break;
+        case 'globe':
+          currentBackground = VANTA.GLOBE(options);
+          break;
+        case 'waves':
+          currentBackground = VANTA.WAVES(options);
+          break;
+        case 'dots':
+          currentBackground = VANTA.DOTS(options);
+          break;
+        case 'cells':
+          currentBackground = VANTA.CELLS(options);
+          break;
+        case 'halo':
+          currentBackground = VANTA.HALO(options);
+          break;
+        default:
+          currentBackground = VANTA.RINGS(options);
+      }
+    }
+
+    // 加载最近日志
+    async function loadRecentLogs() {
+      try {
+        const response = await fetch('/api/recent-logs');
+        const data = await response.json();
+        
+        if (data.success) {
+          const logsBody = document.getElementById('recent-logs-body');
+          logsBody.innerHTML = '';
+          
+          // 如果没有日志数据，显示一条提示信息
+          if (data.logs.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td colspan="3" style="text-align: center;">暂无日志数据</td>`;
+            logsBody.appendChild(row);
+            return;
+          }
+          
+          // 添加日志数据
+          data.logs.forEach(log => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${formatDate(new Date(log.timestamp))}</td>
+              <td><span class="log-type ${log.type}">${log.type}</span></td>
+              <td>${log.message}</td>
+            `;
+            logsBody.appendChild(row);
+          });
+        } else {
+          showNotification('加载日志失败: ' + data.message);
+        }
+      } catch (error) {
+        console.error('加载日志失败:', error);
+        showNotification('加载日志失败，请稍后再试');
+      }
+    }
+
+    // 加载进程监控数据
+    async function loadProcesses() {
+      try {
+        const response = await fetch('/api/processes?limit=5');
+        const data = await response.json();
+        
+        if (data.success) {
+          const processList = document.getElementById('process-list');
+          processList.innerHTML = '';
+          
+          // 如果没有进程数据，显示一条提示信息
+          if (data.processes.length === 0) {
+            const item = document.createElement('div');
+            item.className = 'process-item';
+            item.innerHTML = `<div style="grid-column: 1 / -1; text-align: center;">暂无进程数据</div>`;
+            processList.appendChild(item);
+            return;
+          }
+          
+          // 添加进程数据
+          data.processes.forEach(process => {
+            const item = document.createElement('div');
+            item.className = 'process-item';
+            item.innerHTML = `
+              <div>${process.pid}</div>
+              <div class="process-name" title="${process.name}">${process.name}</div>
+              <div>${process.memory_mb}MB</div>
+              <div>${process.cpu_percent}%</div>
+            `;
+            processList.appendChild(item);
+          });
+        } else {
+          showNotification('加载进程数据失败: ' + data.message);
+        }
+      } catch (error) {
+        console.error('加载进程数据失败:', error);
+        showNotification('加载进程数据失败，请稍后再试');
+      }
+    }
+
+    // 初始化状态卡片交互
+    function initStatusCards() {
+      // 切换机器人状态
+      document.getElementById('toggle-bot').addEventListener('click', async function() {
+        const botStatus = document.getElementById('bot-status');
+        const isRunning = botStatus.textContent === '运行中';
+        
+        try {
+          const response = await fetch('/api/toggle-bot', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: isRunning ? 'stop' : 'start' })
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            botStatus.textContent = isRunning ? '已停止' : 'zhenxun_bot-运行中';
+            const cardIcon = this.parentElement.querySelector('.card-icon');
+            if (isRunning) {
+              cardIcon.classList.remove('running');
+              showNotification('机器人已停止');
+            } else {
+              cardIcon.classList.add('running');
+              showNotification('机器人已启动');
+            }
+          } else {
+            showNotification(data.message || '操作失败');
+          }
+        } catch (error) {
+          console.error('操作失败:', error);
+          showNotification('操作失败，请稍后再试');
+        }
+      });
+      
+      // 重连协议
+      document.getElementById('reconnect-protocol').addEventListener('click', async function() {
+        try {
+          showNotification('正在重新连接协议...');
+          
+          const response = await fetch('/api/reconnect-protocol', {
+            method: 'POST'
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            document.getElementById('protocol-status').textContent = 'napcat-已连接';
+            showNotification('协议重连成功');
+          } else {
+            document.getElementById('protocol-status').textContent = '连接失败';
+            showNotification(data.message || '重连失败');
+          }
+        } catch (error) {
+          console.error('重连失败:', error);
+          showNotification('重连失败，请稍后再试');
+        }
+      });
+      
+      // 刷新系统资源
+      document.getElementById('refresh-resources').addEventListener('click', async function() {
+        try {
+          const response = await fetch('/api/system-resources');
+          const data = await response.json();
+          
+          if (data.success) {
+            document.getElementById('system-resources').textContent = 
+              `CPU: ${data.data.cpu}% | 内存: ${data.data.memory} | 进程数: ${data.data.processes} | 磁盘占用: ${data.data.disk}`;
+            showNotification('系统资源已更新');
+          } else {
+            showNotification(data.message || '刷新失败');
+          }
+        } catch (error) {
+          console.error('刷新失败:', error);
+          showNotification('刷新失败，请稍后再试');
+        }
+      });
+    }
+
+    // 格式化日期
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // 显示通知
+    function showNotification(message) {
+      const notification = document.getElementById('notification');
+      const notificationMessage = document.getElementById('notification-message');
+      
+      notificationMessage.textContent = message;
+      notification.classList.add('show');
+      
+      // 5秒后自动隐藏
+      setTimeout(hideNotification, 5000);
+    }
+
+    // 隐藏通知
+    function hideNotification() {
+      const notification = document.getElementById('notification');
+      notification.classList.remove('show');
+    }
+  </script>
+</body>
+</html>

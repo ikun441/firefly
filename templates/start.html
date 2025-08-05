@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>firefly-初始设置</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<style>
+  @font-face {
+    font-family: 'cute-font';
+    src: url("/static/src/cute.ttf");
+  }
+  html, body {
+    font-family: 'cute-font', sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    color: #ffffff;
+    background-color: #6ee2f5; /* 添加背景色，与vanta.js背景颜色匹配 */
+  }
+  .custom-text {
+    font-family: 'cute-font', sans-serif;
+  }
+</style>
+<body>
+  <div id="background-container" style="width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 0;"></div>
+  
+  <div class="setup-container">
+    <div class="setup-header">
+      <img src="/static/src/firefly.png" alt="Logo" class="setup-logo">
+      <h1 class="custom-text">欢迎使用 Firefly</h1>
+      <p class="setup-subtitle" style="color: #ffffff;">让我们开始配置您的机器人</p>
+    </div>
+    
+    <div class="setup-steps">
+      <div class="setup-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-steps">
+          <div class="progress-step active" data-step="1">1</div>
+          <div class="progress-step" data-step="2">2</div>
+          <div class="progress-step" data-step="3">3</div>
+        </div>
+      </div>
+      
+      <div class="setup-step-content">
+        <!-- 步骤 1: 欢迎 -->
+        <div class="step-content active" data-step="1">
+          <h2 class="custom-text"><i class="fas fa-robot"></i> 欢迎使用 Firefly</h2>
+          <p style="color: #ffffff;">Firefly 是一个简单而强大的 QQ 机器人部署工具，它可以帮助您快速部署和管理您的机器人。</p>
+          <p style="color: #ffffff;">在开始之前，我们需要进行一些基本设置。</p>
+          <div class="step-actions">
+            <button class="btn-next" data-next="2">开始设置 <i class="fas fa-arrow-right"></i></button>
+          </div>
+        </div>
+        
+        <!-- 步骤 2: 账户设置 -->
+        <div class="step-content" data-step="2">
+          <h2 class="custom-text"><i class="fas fa-user-shield"></i> 账户安全</h2>
+          <p style="color: #ffffff;">为了保障您的账户安全，请修改默认的管理员密码。</p>
+          <form id="password-form" class="setup-form">
+            <div class="form-group">
+              <label for="current-password">当前密码</label>
+              <input type="password" id="current-password" name="current_password" value="ilovefirefly" readonly>
+              <small>默认密码: ilovefirefly</small>
+            </div>
+            <div class="form-group">
+              <label for="new-password">新密码</label>
+              <input type="password" id="new-password" name="new_password" required>
+            </div>
+            <div class="form-group">
+              <label for="confirm-password">确认新密码</label>
+              <input type="password" id="confirm-password" name="confirm_password" required>
+            </div>
+            <div class="form-group">
+              <label for="botnum">QQ号</label>
+              <input type="text" id="botnum" name="botnum" value="123456789">
+            </div>
+            <div class="form-group">
+              <label for="botpasswd">机器人密码</label>
+              <input type="password" id="botpasswd" name="botpasswd" value="123456789">
+            </div>
+          </form>
+          <div class="step-actions">
+            <button class="btn-back" data-back="1"><i class="fas fa-arrow-left"></i> 返回</button>
+            <button class="btn-next" data-next="3" id="save-password">下一步 <i class="fas fa-arrow-right"></i></button>
+          </div>
+        </div>
+        
+        <!-- 步骤 3: 机器人配置 -->
+        <div class="step-content" data-step="3">
+          <h2 class="custom-text"><i class="fas fa-cogs"></i> 机器人配置</h2>
+          <p>请选择您要使用的机器人和协议。</p>
+          <form id="bot-form" class="setup-form">
+            <div class="form-group">
+              <label for="bot-type">机器人类型</label>
+              <select id="bot-type" name="bot_type">
+                <option value="zhenxun">真寻 Bot</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="protocol-type">协议类型</label>
+              <select id="protocol-type" name="protocol_type">
+                <option value="napcat">NapCat</option>
+              </select>
+            </div>
+          </form>
+          <div class="step-actions">
+            <button class="btn-back" data-back="2"><i class="fas fa-arrow-left"></i> 返回</button>
+            <button class="btn-finish" id="finish-setup">完成设置 <i class="fas fa-check"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notification" class="notification">
+    <span id="notification-message"></span>
+    <button id="notification-close"><i class="fas fa-times"></i></button>
+  </div>
+
+  <style>
+    .setup-container {
+      overflow: auto;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .setup-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      animation: fadeInDown 0.8s ease-out;
+    }
+    .setup-logo {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 0 10px rgba(111, 226, 245, 0.5));
+    }
+    .setup-header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      color: #fefcfc;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .setup-subtitle {
+      font-size: 1.2rem;
+      color: rgba(5, 5, 5, 0.8);
+      margin-top: 0.5rem;
+    }
+    .setup-steps {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      animation: fadeInUp 0.8s ease-out;
+      overflow: auto;
+    }
+    .setup-progress {
+      margin-bottom: 2rem;
+    }
+    .progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #4f8cff 0%, #6ee2f5 100%);
+      border-radius: 3px;
+      width: 33.33%;
+      transition: width 0.5s ease;
+    }
+    .progress-steps {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+    }
+    .progress-steps::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: rgba(255,255,255,0.2);
+      z-index: -1;
+    }
+    .progress-step {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #ffffff;
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+    .progress-step.active {
+      background: linear-gradient(135deg, #4f8cff 0%, #6ee2f5 100%);
+      box-shadow: 0 0 15px rgba(111, 226, 245, 0.5);
+      transform: scale(1.1);
+    }
+    .setup-step-content {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      overflow: hidden;
+    }
+    .step-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(50px);
+      transition: all 0.5s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .step-content.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+    }
+    .step-content h2 {
+      margin-top: 0;
+      color: #fffdfd;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .step-content p {
+      color: rgba(17, 17, 17, 0.8);
+      line-height: 1.6;
+      font-size: 1.1rem;
+    }
+    .step-actions {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      padding-top: 2rem;
+    }
+    .btn-next, .btn-back, .btn-finish {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'cute-font', sans-serif;
+    }
+    .btn-next, .btn-finish {
+      background: linear-gradient(90deg, #4f8cff 0%, #6ee2f5 100%);
+    }
+    .btn-back {
+      background: rgba(255,255,255,0.2);
+    }
+    .btn-next:hover, .btn-finish:hover {
+      background: linear-gradient(90deg, #6ee2f5 0%, #4f8cff 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(111, 226, 245, 0.5);
+    }
+    .btn-back:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+    }
+    .setup-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .form-group label {
+      font-size: 1rem;
+      color: #fff8f8;
+    }
+    .form-group input, .form-group select {
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: none;
+      background: rgba(255,255,255,0.7);
+      font-size: 1rem;
+      transition: box-shadow 0.2s;
+      font-family: 'cute-font', sans-serif;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(111, 226, 245, 0.5);
+    }
+    .form-group small {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+    .notification {
+      position: fixed;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      z-index: 100;
+      transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    .notification.show {
+      bottom: 30px;
+    }
+    #notification-close {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @media (max-width: 768px) {
+      .setup-container {
+        padding: 1rem;
+      }
+      .setup-steps {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.rings.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.birds.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.waves.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.dots.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.cells.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.halo.min.js"></script>
+  
+  <script>
+    // 获取当前背景设置
+    let currentBackground = null;
+    let backgroundConfig = {
+      type: 'rings',
+      options: {
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x4f8cff,
+        backgroundColor: 0x6ee2f5,
+        speed: 1.00
+      }
+    };
+
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', async function() {
+      // 获取配置
+      try {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        
+        if (data.success && data.config.ui && data.config.ui.background) {
+          backgroundConfig = data.config.ui.background;
+        }
+      } catch (error) {
+        console.error('获取配置失败:', error);
+      }
+
+      // 初始化背景
+      initBackground();
+      
+      // 初始化步骤导航
+      initStepNavigation();
+      
+      // 监听密码保存按钮
+      document.getElementById('save-password').addEventListener('click', handlePasswordSave);
+      
+      // 监听完成设置按钮
+      document.getElementById('finish-setup').addEventListener('click', handleFinishSetup);
+      
+      // 监听通知关闭按钮
+      document.getElementById('notification-close').addEventListener('click', hideNotification);
+    });
+
+    // 初始化背景
+    function initBackground() {
+      if (currentBackground) {
+        currentBackground.destroy();
+      }
+      
+      const type = backgroundConfig.type || 'rings';
+      const options = {
+        ...backgroundConfig.options,
+        el: '#background-container'
+      };
+      
+      switch (type) {
+        case 'rings':
+          currentBackground = VANTA.RINGS(options);
+          break;
+        case 'net':
+          currentBackground = VANTA.NET(options);
+          break;
+        case 'birds':
+          currentBackground = VANTA.BIRDS(options);
+          break;
+        case 'fog':
+          currentBackground = VANTA.FOG(options);
+          break;
+        case 'globe':
+          currentBackground = VANTA.GLOBE(options);
+          break;
+        case 'waves':
+          currentBackground = VANTA.WAVES(options);
+          break;
+        case 'dots':
+          currentBackground = VANTA.DOTS(options);
+          break;
+        case 'cells':
+          currentBackground = VANTA.CELLS(options);
+          break;
+        case 'halo':
+          currentBackground = VANTA.HALO(options);
+          break;
+        default:
+          currentBackground = VANTA.RINGS(options);
+      }
+    }
+
+    // 初始化步骤导航
+    function initStepNavigation() {
+      const nextButtons = document.querySelectorAll('.btn-next');
+      const backButtons = document.querySelectorAll('.btn-back');
+      
+      nextButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const nextStep = this.getAttribute('data-next');
+          goToStep(nextStep);
+        });
+      });
+      
+      backButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const prevStep = this.getAttribute('data-back');
+          goToStep(prevStep);
+        });
+      });
+    }
+
+    // 切换到指定步骤
+    function goToStep(step) {
+      // 更新进度条
+      const progressFill = document.getElementById('progress-fill');
+      progressFill.style.width = `${step * 33.33}%`;
+      
+      // 更新步骤指示器
+      const stepIndicators = document.querySelectorAll('.progress-step');
+      stepIndicators.forEach(indicator => {
+        if (parseInt(indicator.getAttribute('data-step')) <= parseInt(step)) {
+          indicator.classList.add('active');
+        } else {
+          indicator.classList.remove('active');
+        }
+      });
+      
+      // 更新步骤内容
+      const stepContents = document.querySelectorAll('.step-content');
+      stepContents.forEach(content => {
+        if (content.getAttribute('data-step') === step) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 处理密码保存
+    async function handlePasswordSave() {
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      if (!newPassword) {
+        showNotification('请输入新密码');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        showNotification('新密码和确认密码不匹配');
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('current_password', 'ilovefirefly');
+        formData.append('new_password', newPassword);
+        
+        const response = await fetch('/change-password', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification('密码修改成功');
+          goToStep('3');
+        } else {
+          showNotification(data.message || '密码修改失败');
+        }
+      } catch (error) {
+        console.error('修改密码失败:', error);
+        showNotification('修改密码失败，请稍后再试');
+      }
+    }
+
+    // 处理完成设置
+    async function handleFinishSetup() {
+      try {
+        // 获取机器人和协议设置
+        const botType = document.getElementById('bot-type').value;
+        const protocolType = document.getElementById('protocol-type').value;
+        
+        // 更新配置
+        const response = await fetch('/api/update-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            application: {
+              bot: botType,
+              agreements: protocolType
+            }
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // 完成设置
+          const completeResponse = await fetch('/api/complete-setup', {
+            method: 'POST'
+          });
+          
+          const completeData = await completeResponse.json();
+          
+          if (completeData.success) {
+            showNotification('设置完成，即将跳转到仪表盘...');
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 2000);
+          } else {
+            showNotification(completeData.message || '完成设置失败');
+          }
+        } else {
+          showNotification(data.message || '更新配置失败');
+        }
+      } catch (error) {
+        console.error('完成设置失败:', error);
+        showNotification('完成设置失败，请稍后再试');
+      }
+    }
+
+    // 显示通知
+    function showNotification(message) {
+      const notification = document.getElementById('notification');
+      const notificationMessage = document.getElementById('notification-message');
+      
+      notificationMessage.textContent = message;
+      notification.classList.add('show');
+      
+      // 5秒后自动隐藏
+      setTimeout(hideNotification, 5000);
+    }
+
+    // 隐藏通知
+    function hideNotification() {
+      const notification = document.getElementById('notification');
+      notification.classList.remove('show');
+    }
+  </script>
+</body>
+</html>

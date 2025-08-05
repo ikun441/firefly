@@ -1,0 +1,7 @@
+agreement:
+  - napcat 
+  - llonebot
+napcat:
+  name: napcat
+  version: 1.0.0
+  description: A QQ bot project by napcat

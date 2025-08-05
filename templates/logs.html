@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>firefly-日志</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<style>
+  @font-face {
+    font-family: 'cute-font';
+    src: url("/static/src/cute.ttf");
+  }
+  html, body {
+    font-family: 'cute-font', sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    color: #fff;
+    background-color: #6ee2f5; /* 添加背景色，与vanta.js背景颜色匹配 */
+  }
+  .custom-text {
+    font-family: 'cute-font', sans-serif;
+  }
+</style>
+<body>
+  <div id="background-container" style="width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 0;"></div>
+  
+  <div class="navbar">
+    <div class="navbar-brand">
+      <img src="/static/src/firefly.png" alt="Logo" class="navbar-logo">
+      <span class="custom-text">Firefly</span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/dashboard" class="navbar-item"><i class="fas fa-home"></i> 首页</a>
+      <a href="/run" class="navbar-item"><i class="fas fa-play"></i> 启动</a>
+      <a href="/logs" class="navbar-item active"><i class="fas fa-list"></i> 日志</a>
+      <a href="/processes" class="navbar-item"><i class="fas fa-tasks"></i> 进程</a>
+      <a href="/settings" class="navbar-item"><i class="fas fa-cog"></i> 设置</a>
+    </div>
+    <div class="navbar-end">
+      <button id="logout-btn" class="navbar-item"><i class="fas fa-sign-out-alt"></i><a href="/login">退出</a></button>
+    </div>
+  </div>
+
+  <div class="dashboard-container">
+    
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <div class="top-bar">
+        <div class="page-title">
+          <h1 class="custom-text">日志</h1>
+        </div>
+        <div class="user-info">
+          <span id="current-user">管理员</span>
+          <div class="user-avatar">
+            <i class="fas fa-user"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="logs-content">
+        <!-- 日志筛选器 -->
+        <div class="logs-filter">
+          <div class="filter-group">
+            <label for="log-type" style="color: #ffffff;">日志类型</label>
+            <select id="log-type" class="filter-select" style="color: #000000;">
+              <option value="all">全部</option>
+              <option value="info">信息</option>
+              <option value="warning">警告</option>
+              <option value="error">错误</option>
+              <option value="debug">调试</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label for="date-range" style="color: #fffcfc;">日期范围</label>
+            <select id="date-range" class="filter-select" style="color: #000000;">
+              <option value="today">今天</option>
+              <option value="yesterday">昨天</option>
+              <option value="week">本周</option>
+              <option value="month">本月</option>
+              <option value="custom">自定义</option>
+            </select>
+          </div>
+          
+          <div class="filter-group" id="custom-date-range" style="display: none;">
+            <div class="date-inputs">
+              <input type="date" id="start-date" class="date-input">
+              <span>至</span>
+              <input type="date" id="end-date" class="date-input">
+            </div>
+          </div>
+          
+          <div class="filter-group">
+            <label for="search-logs" style="color: #ffffff;">搜索</label>
+            <div class="search-input-container">
+              <input type="text" id="search-logs" placeholder="搜索日志内容...">
+              <button id="search-button">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+          
+          <button id="apply-filters" class="filter-button">
+            应用筛选
+          </button>
+          
+          <button id="clear-filters" class="filter-button clear">
+            清除筛选
+          </button>
+        </div>
+        
+        <!-- 日志表格 -->
+        <div class="logs-table-container">
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>时间 <i class="fas fa-sort"></i></th>
+                <th>类型 <i class="fas fa-sort"></i></th>
+                <th>来源 <i class="fas fa-sort"></i></th>
+                <th>内容</th>
+              </tr>
+            </thead>
+            <tbody id="logs-body" style="color: #ffffff;">
+              <!-- 日志内容将通过 JavaScript 动态加载 -->
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- 分页控制 -->
+        <div class="pagination">
+          <button id="prev-page" class="page-button" disabled>
+            <i class="fas fa-chevron-left"></i> 上一页
+          </button>
+          
+          <div class="page-info">
+            第 <span id="current-page">1</span> 页，共 <span id="total-pages">1</span> 页
+          </div>
+          
+          <button id="next-page" class="page-button" disabled>
+            下一页 <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notification" class="notification">
+    <span id="notification-message"></span>
+    <button id="notification-close"><i class="fas fa-times"></i></button>
+  </div>
+
+  <style>
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1.5rem;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .navbar-logo {
+      height: 40px;
+      width: auto;
+    }
+    .navbar-menu {
+      display: flex;
+      gap: 1rem;
+    }
+    .navbar-item {
+      color: #f9f3f3;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+    }
+    .navbar-item:hover, .navbar-item.active {
+      background: rgba(255, 255, 255, 0.56);
+      transform: translateY(-2px);
+    }
+    .navbar-end {
+      margin-left: auto;
+    }
+    #logout-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-family: 'cute-font', sans-serif;
+    }
+    
+    .dashboard-container {
+      height: calc(100vh - 60px);
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* 主内容区样式 */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .page-title h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: #f9f9f9;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: #f6f0f0;
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    
+    /* 日志筛选器样式 */
+    .logs-filter {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: flex-end;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .filter-group label {
+      font-size: 0.9rem;
+      color: rgba(20, 1, 1, 0.8);
+    }
+    .filter-select, .search-input-container input, .date-input {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      color: #fbfafa;
+      font-family: 'cute-font', sans-serif;
+      min-width: 150px;
+    }
+    .filter-select:focus, .search-input-container input:focus, .date-input:focus {
+      outline: none;
+      border-color: rgba(8, 9, 9, 0.5);
+      box-shadow: 0 0 0 2px rgba(11, 11, 11, 0.2);
+    }
+    .search-input-container {
+      display: flex;
+      align-items: center;
+    }
+    .search-input-container input {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-right: none;
+      min-width: 200px;
+    }
+    .search-input-container button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-left: none;
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+      padding: 0.5rem 1rem;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .search-input-container button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .date-inputs {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .date-inputs span {
+      color: rgba(16, 16, 16, 0.8);
+    }
+    .filter-button {
+      background: linear-gradient(135deg, #4f8cff 0%, #6ee2f5 100%);
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1.5rem;
+      color: #fbf9f9;
+      font-family: 'cute-font', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(79, 140, 255, 0.3);
+    }
+    .filter-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 140, 255, 0.4);
+    }
+    .filter-button.clear {
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+    }
+    .filter-button.clear:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* 日志表格样式 */
+    .logs-table-container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+      overflow-x: auto;
+    }
+    .logs-table {
+      width: 100%;
+      border-collapse: collapse;
+      color: rgba(12, 12, 12, 0.8);
+    }
+    .logs-table th, .logs-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .logs-table th {
+      color: #ffffff;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    .logs-table th i {
+      margin-left: 0.5rem;
+      font-size: 0.8rem;
+      opacity: 0.5;
+    }
+    .logs-table th:hover i {
+      opacity: 1;
+    }
+    .logs-table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .log-type {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+    .log-type.info {
+      background: rgba(79, 140, 255, 0.2);
+      color: #4f8cff;
+    }
+    .log-type.warning {
+      background: rgba(255, 159, 64, 0.2);
+      color: #ff9f40;
+    }
+    .log-type.error {
+      background: rgba(255, 99, 132, 0.2);
+      color: #ff6384;
+    }
+    .log-type.debug {
+      background: rgba(75, 192, 192, 0.2);
+      color: #4bc0c0;
+    }
+    
+    /* 分页控制样式 */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+    }
+    .page-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      color: #fff;
+      font-family: 'cute-font', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .page-button:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .page-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .page-info {
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    /* 通知样式 */
+    .notification {
+      position: fixed;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      z-index: 100;
+      transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    .notification.show {
+      bottom: 30px;
+    }
+    #notification-close {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 992px) {
+      .sidebar {
+        width: 80px;
+      }
+      .sidebar-header h2, .menu-item span {
+        display: none;
+      }
+      .sidebar-header {
+        justify-content: center;
+      }
+      .menu-item {
+        justify-content: center;
+        padding: 0.75rem;
+      }
+      .menu-item i {
+        margin: 0;
+      }
+      .logs-filter {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filter-group, .filter-select, .search-input-container, .date-inputs {
+        width: 100%;
+      }
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.rings.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.birds.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.waves.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.dots.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.cells.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.halo.min.js"></script>
+  
+  <script>
+    // 获取当前背景设置
+    let currentBackground = null;
+    let backgroundConfig = {
+      type: 'rings',
+      options: {
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x4f8cff,
+        backgroundColor: 0x6ee2f5,
+        speed: 1.00
+      }
+    };
+
+    // 初始化背景
+    function initBackground() {
+      if (currentBackground) {
+        currentBackground.destroy();
+      }
+      
+      const type = backgroundConfig.type || 'rings';
+      const options = {
+        ...backgroundConfig.options,
+        el: '#background-container'
+      };
+      
+      switch (type) {
+        case 'rings':
+          currentBackground = VANTA.RINGS(options);
+          break;
+        case 'net':
+          currentBackground = VANTA.NET(options);
+          break;
+        case 'birds':
+          currentBackground = VANTA.BIRDS(options);
+          break;
+        case 'fog':
+          currentBackground = VANTA.FOG(options);
+          break;
+        case 'globe':
+          currentBackground = VANTA.GLOBE(options);
+          break;
+        case 'waves':
+          currentBackground = VANTA.WAVES(options);
+          break;
+        case 'dots':
+          currentBackground = VANTA.DOTS(options);
+          break;
+        case 'cells':
+          currentBackground = VANTA.CELLS(options);
+          break;
+        case 'halo':
+          currentBackground = VANTA.HALO(options);
+          break;
+        default:
+          currentBackground = VANTA.RINGS(options);
+      }
+    }
+
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', async function() {
+      // 获取配置
+      try {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        
+        if (data.success && data.config.ui && data.config.ui.background) {
+          backgroundConfig = data.config.ui.background;
+        }
+      } catch (error) {
+        console.error('获取配置失败:', error);
+      }
+
+      // 初始化背景
+      initBackground();
+      
+      // 初始化日志页面
+      initLogsPage();
+      
+      // 监听通知关闭按钮
+      document.getElementById('notification-close').addEventListener('click', hideNotification);
+    });
+
+    // 初始化日志页面
+    function initLogsPage() {
+      // 加载日志数据
+      loadLogs();
+      
+      // 监听日期范围选择变化
+      document.getElementById('date-range').addEventListener('change', function() {
+        const customDateRange = document.getElementById('custom-date-range');
+        if (this.value === 'custom') {
+          customDateRange.style.display = 'block';
+        } else {
+          customDateRange.style.display = 'none';
+        }
+      });
+      
+      // 监听筛选按钮点击
+      document.getElementById('apply-filters').addEventListener('click', function() {
+        loadLogs(1); // 重新加载第一页
+      });
+      
+      // 监听清除筛选按钮点击
+      document.getElementById('clear-filters').addEventListener('click', function() {
+        document.getElementById('log-type').value = 'all';
+        document.getElementById('date-range').value = 'today';
+        document.getElementById('custom-date-range').style.display = 'none';
+        document.getElementById('search-logs').value = '';
+        loadLogs(1); // 重新加载第一页
+      });
+      
+      // 监听搜索按钮点击
+      document.getElementById('search-button').addEventListener('click', function() {
+        loadLogs(1); // 重新加载第一页
+      });
+      
+      // 监听搜索输入框回车键
+      document.getElementById('search-logs').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          loadLogs(1); // 重新加载第一页
+        }
+      });
+      
+      // 监听表头排序点击
+      document.querySelectorAll('.logs-table th').forEach(th => {
+        th.addEventListener('click', function() {
+          // 实现排序逻辑
+          const column = this.textContent.trim().split(' ')[0].toLowerCase();
+          sortLogs(column);
+        });
+      });
+      
+      // 监听分页按钮点击
+      document.getElementById('prev-page').addEventListener('click', function() {
+        const currentPage = parseInt(document.getElementById('current-page').textContent);
+        if (currentPage > 1) {
+          loadLogs(currentPage - 1);
+        }
+      });
+      
+      document.getElementById('next-page').addEventListener('click', function() {
+        const currentPage = parseInt(document.getElementById('current-page').textContent);
+        const totalPages = parseInt(document.getElementById('total-pages').textContent);
+        if (currentPage < totalPages) {
+          loadLogs(currentPage + 1);
+        }
+      });
+    }
+
+    // 加载日志数据
+    async function loadLogs(page = 1) {
+      try {
+        // 获取筛选条件
+        const logType = document.getElementById('log-type').value;
+        const dateRange = document.getElementById('date-range').value;
+        const searchQuery = document.getElementById('search-logs').value;
+        
+        let startDate = null;
+        let endDate = null;
+        
+        if (dateRange === 'custom') {
+          startDate = document.getElementById('start-date').value;
+          endDate = document.getElementById('end-date').value;
+        }
+        
+        // 构建查询参数
+        const params = new URLSearchParams();
+        params.append('page', page);
+        params.append('type', logType);
+        params.append('date_range', dateRange);
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        if (searchQuery) params.append('search', searchQuery);
+        
+        // 发送请求
+        const response = await fetch(`/api/logs?${params.toString()}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          // 更新日志表格
+          updateLogsTable(data.logs);
+          
+          // 更新分页信息
+          updatePagination(data.pagination);
+        } else {
+          showNotification('加载日志失败: ' + data.message);
+        }
+      } catch (error) {
+        console.error('加载日志失败:', error);
+        showNotification('加载日志失败，请稍后再试');
+      }
+    }
+
+    // 更新日志表格
+    function updateLogsTable(logs) {
+      const logsBody = document.getElementById('logs-body');
+      logsBody.innerHTML = '';
+      
+      // 如果没有日志数据，显示一条提示信息
+      if (logs.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="4" style="text-align: center;">暂无日志数据</td>`;
+        logsBody.appendChild(row);
+        return;
+      }
+      
+      // 添加日志数据
+      logs.forEach(log => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${formatDate(new Date(log.timestamp))}</td>
+          <td><span class="log-type ${log.type}">${log.type}</span></td>
+          <td>${log.source}</td>
+          <td>${log.message}</td>
+        `;
+        logsBody.appendChild(row);
+      });
+    }
+
+    // 更新分页信息
+    function updatePagination(pagination) {
+      document.getElementById('current-page').textContent = pagination.current_page;
+      document.getElementById('total-pages').textContent = pagination.total_pages;
+      
+      // 更新分页按钮状态
+      document.getElementById('prev-page').disabled = pagination.current_page <= 1;
+      document.getElementById('next-page').disabled = pagination.current_page >= pagination.total_pages;
+    }
+
+    // 排序日志
+    function sortLogs(column) {
+      // 实际应用中，这里应该发送请求到后端进行排序
+      // 这里仅作为示例，模拟排序操作
+      showNotification(`正在按 ${column} 排序...`);
+      loadLogs(); // 重新加载日志
+    }
+
+    // 格式化日期
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // 显示通知
+    function showNotification(message) {
+      const notification = document.getElementById('notification');
+      const notificationMessage = document.getElementById('notification-message');
+      
+      notificationMessage.textContent = message;
+      notification.classList.add('show');
+      
+      // 5秒后自动隐藏
+      setTimeout(hideNotification, 5000);
+    }
+
+    // 隐藏通知
+    function hideNotification() {
+      const notification = document.getElementById('notification');
+      notification.classList.remove('show');
+    }
+  </script>
+</body>
+</html>
